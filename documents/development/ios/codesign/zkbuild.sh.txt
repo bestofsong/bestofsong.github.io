@@ -1,0 +1,299 @@
+
+function show_help() {
+usage="
+usage:\n
+$0\n
+-a [参数可选，指定输出archive文件的路径，一般以.xcarchive为后缀]\n  
+-e [参数可选，指定输出的ipa包文件的路径，一般以.ipa为后缀；如果不指定-a选项，则输出的archive文件的路径由本参数值推导：除了后缀名不同，其他部分与本参数值相同]\n
+-b 仅仅编译\n
+-t 编译并运行单元测试和UI测试\n
+-n|--name <设备名称，可以是物理机或模拟器>\n
+-i|--identifier <设备的UDID>\n
+-o|--os <iOS版本, i.e. 8.0>\n                         
+-p|--platform <设备的平台，iOS Simulator或iOS或OS X>\n
+-r|--root <.xcworkspace文件的所在的相对或绝对路ing，假定该路径同时也包含了"workspace_name/Info.plist文件">\n
+--plist <plist文件名，不包含.plist后缀，脚本>\n
+--teamid\n
+--method\n
+-h|--help 显示帮助\n
+"
+printf "$usage"
+}
+
+path_to_xmlstarlet=`which xmlstarlet`
+if [[ -z $path_to_xmlstarlet ]] ; then
+  brew install xmlstarlet
+  if [[ $? -ne 0 ]] ; then
+    echo "failed to install xmlstarlet, quit"
+    exist -1
+  fi
+fi
+
+# A POSIX variable
+OPTIND=1         # Reset in case getopts has been used previously in the shell.
+
+# Initialize our own variables:
+should_archive=0
+output_archive=""
+
+should_export=0
+output_ipa=""
+
+should_build=0
+
+should_test=0
+device_id=""
+device_name=""
+os=""
+platform=""
+
+root=""
+
+teamid=""
+method=""
+
+if [[ $# = 0 ]] ; then
+  show_help
+  exit 1
+fi
+
+while [[ $# > 0  ]]
+do
+  key="$1"
+  case $key in
+    -h|--help)
+      show_help
+      exit 0
+      ;;
+    -e|--export)
+      should_export=1
+      should_archive=1
+      if [[ ( $# -gt 1 ) && ( $2 != -* ) ]] ; then
+        output_ipa="$2"
+        if [[ -z $output_archive ]] ; then
+          dirpath=`dirname $output_ipa`
+          filename=`basename $output_ipa`
+          filename_no_suf=${filename%.*}
+          output_archive=$dirpath/$filename_no_suf.xcarchive
+        fi
+        shift
+      fi
+      ;;
+    -a|--archive)
+      should_archive=1
+      if [[ ( $# -gt 1 ) &&  ( $2 != -* ) ]] ; then
+        output_archive="$2"
+        shift
+      fi
+      ;;
+    -b|--build)
+      should_build=1
+      ;;
+    -t|--test)
+      should_build=1
+      should_test=1
+      ;;
+    -n|--name)
+      if [[ ( $# -gt 1 ) &&  ( $2 != -* ) ]] ; then
+        device_name="$2"
+        shift
+      fi
+      ;;
+    -i|--identifier)
+      if [[ ( $# -gt 1 ) &&  ( $2 != -* ) ]] ; then
+        device_id="$2"
+        shift
+      fi
+      ;;
+    -o|--os)
+      if [[ ( $# -gt 1 ) &&  ( $2 != -* ) ]] ; then
+        os="$2"
+        shift
+      fi
+      ;;
+    -p|--platform)
+      if [[ ( $# -gt 1 ) &&  ( $2 != -* ) ]] ; then
+        platform="$2"
+        shift
+      fi
+      ;;
+    -r|--root)
+      if [[ ($# -gt 1 ) && ($2 != -*) ]] ; then
+        root="$2"
+        if [[ $root != /* ]] ; then
+          root="`pwd`/$root"
+        fi
+        shift
+      else
+        echo '参数不正确，-r选项后要跟.xcworkspace文件的根目录'
+        exit -1
+      fi
+      ;;
+    -c|--callback)
+      if [[ ( $# -gt 1 ) &&  ( $2 != -* ) ]] ; then
+        callback="$2"
+        shift
+      fi
+      ;;
+    --teamid)
+      if [[ ( $# -gt 1 ) &&  ( $2 != -* ) ]] ; then
+        teamid="$2"
+        shift
+      fi
+      ;;
+    --method)
+      if [[ ( $# -gt 1 ) &&  ( $2 != -* ) ]] ; then
+        method="$2"
+        shift
+      fi
+      ;;
+    *)
+      echo "invalid arguments: $key"
+      show_help
+      echo ${LINENO}
+      exit
+      ;;
+  esac
+  shift
+done
+
+#default values
+if [[ $0 = /* ]] ; then
+  this_file_path=`dirname $0`
+else
+  this_file_path=`pwd`/`dirname $0`
+fi
+
+source "$this_file_path/lib/ios-app-utils.sh"
+
+backdir=`pwd`
+cd $root
+
+workspace_file=`find . -maxdepth 1 -name '*.xcworkspace' -exec echo {} \;`
+workspace_name_full=`basename $workspace_file`
+workspace_name=${workspace_name_full%.*}
+printf "workspace: $workspace_name\n"
+
+infoPlistPath="`pwd`/$workspace_name/Info.plist"
+appName=`get_app_name $root` 
+printf "appName: $appName\n"
+
+uniqueAndNiceName=~/"$appName-datetime`date +%Y-%m-%d-%H-%M-%S`-branch\
+`git rev-parse --abbrev-ref head`-v\
+`get_app_short_version_string "$root"`-build\
+`get_app_bundle_version "$root"`-commit\
+`git rev-parse head`-method${method}-teamid${teamid}"
+
+printf "uniqueAndNiceName: $uniqueAndNiceName\n\n"
+
+if [[ $should_archive -ne 0 ]] ; then
+  if [[ $output_archive = "" ]] ; then
+    output_archive=$uniqueAndNiceName.xcarchive
+  fi
+fi
+
+if [[ $should_export -ne 0 ]] ; then
+  if [[ $output_ipa = "" ]] ; then
+    output_ipa=$uniqueAndNiceName.ipa
+  fi
+fi
+
+#xcodebuild:
+#platform is needed, defaults to iOS Simulator
+#
+if [[ $should_test -ne 0 ]] ; then
+  if [[ $platform = "" ]] ; then
+    platform="iOS Simulator"
+  fi
+  if [[ $device_id = "" ]] ; then
+    if [[ $device_name = "" ]] ; then
+      if [[ $platform = "iOS Simulator" ]] ; then
+        device_name="iPhone 5s"
+        os="9.0"
+      else
+        echo "must specify device_id or device_name to unique identify a physical dev"
+        exit 1
+      fi
+    else
+      if [[ $platform = "iOS Simulator" ]] ; then
+        if [[ $os = "" ]] ; then
+          os="9.0"
+        fi
+      fi
+    fi
+  else
+    device_name=""
+    os=""
+  fi
+fi
+
+#todo: 相对路径写死了
+#backup current dir, and restore it .. eh .. when this script finish running without error
+
+
+##based on this script's path, we cd into the directory xcodebuild should be called from
+#script_path=""
+#if [[ $0 = /* ]] ; then
+#  script_path=$0
+#else
+#  script_path=`pwd`/$0
+#fi
+#cd `dirname $script_path`
+#cd ..
+
+if [[ $should_archive -ne 0 && ! -d "$output_archive" ]] ; then
+  printf "will creating archive first at: $output_archive\n"
+  xcodebuild -workspace $workspace_name_full -scheme "$workspace_name"\
+    -archivePath "$output_archive" archive
+fi
+
+# generate plist file with input options
+plistTemplate='<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n <!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\"> \n <plist version=\"1.0\"> \n <dict> \n <key>method</key>\n <string>appstore</string>\n <key>teamID</key>\n <string>ZZ9329T9X9</string> \n </dict> \n </plist> \n'
+temp_plist_file="./temp_plist_file.plist"
+printf "$plistTemplate">"${temp_plist_file}"
+xmlstarlet ed -L -P -u "/plist/dict/key[text() = 'method']/following-sibling::*[1]"  -v "$method" "${temp_plist_file}"
+xmlstarlet ed -L -P -u "/plist/dict/key[text() = 'teamID']/following-sibling::*[1]"  -v "$teamid" "${temp_plist_file}"
+
+if [[ $should_export -ne 0 ]] ; then
+  xcodebuild -exportArchive -archivePath "$output_archive"\
+    -exportPath  "$output_ipa" -exportOptionsPlist "${temp_plist_file}"
+  if [[ -d $output_ipa ]] ; then
+    bad_file_name="$workspace_name.ipa"
+    mv "${output_ipa}" "${output_ipa}-tmp"
+    mv "${output_ipa}-tmp/${bad_file_name}" "${output_ipa}"
+    rmdir "${output_ipa}-tmp"
+  fi
+fi
+
+if [ -n "$callback" ] ; then
+  postProcess="$callback \"$output_ipa\""
+  echo "will execute postProcess: $postProcess"
+  eval "$postProcess"
+fi
+
+if [ -f "${temp_plist_file}" ] ; then
+  rm "${temp_plist_file}"
+fi
+
+#if [[ $should_test -ne 0 ]] ; then
+#
+#  if [[ $should_build -ne 1 ]] ; then
+#    xcodebuild -workspace $workspace_name_full -scheme $workspace_name build
+#  fi
+#
+#  dest="platform=$platform"
+#  if [[ $device_id != "" ]] ; then
+#    dest="$dest,id=$device_id"
+#  fi
+#  if [[ $device_name != "" ]] ; then
+#    dest="$dest,name=$device_name"
+#  fi
+##  if [[ $os != "" ]] ; then
+##    dest="$dest,OS=$os"
+##  fi
+#  echo $dest
+#
+#  xcodebuild -workspace SmartStudy.xcworkspace -scheme SmartStudy -destination "$dest"  test
+#fi
+
+cd $backdir

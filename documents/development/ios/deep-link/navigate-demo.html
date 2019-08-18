@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" type="text/css" href="/documents/development/css/style.css" >
+    <link rel="stylesheet" type="text/css" href="/documents/development/css/documentation.css" >
+    <script type="text/javascript" src="/lib/utils/URI.js"></script>
+    <script type="text/javascript">
+      var uri = URI(window.location.href);
+      document.title = uri.filename();
+    </script>
+  </head>
+  <body>更新时间：2017-11-23 10:27:14 GMT+8<br />
+    <a href="mobile://navigate?page=practice_list&examinationId=1&subjectId=1&tagId=109&textbookId=1&type=1&tagName=%E7%94%9F%E7%89%A9%2F%E7%94%9F%E6%80%81%E5%AD%A6">生物/生态学</a>
+    <a href="mobile://navigate?page=practice_list&examinationId=1&subjectId=1&textbookId=1&packageId=276">tpo53阅读</a>
+    <a href="mobile://navigate?page=abroad_study_plan">留学规划</a>
+    <a href="mobile://navigate?page=consult">在线咨询</a>
+    <a href="mobile://launch?app_name=wechat">跳转微信</a>
+    <a href="http://a.app.qq.com/o/simple.jsp?pkgname=com.smartstudy.zhantoefl">斩托福应用宝</a>
+    <a href="http://stackoverflow.com">so</a>
+    <a href="https://stackoverflow.com">so-https</a>
+    <a href="https://itunes.apple.com/app/apple-store/id1126218840">斩雅思@AppStore</a>
+    <a onclick="downloadApp()">斩雅思@AppStore</a>
+    <a onclick="goMine()">跳转tab页</a>
+    <a onclick="share()">分享</a>
+    <a onclick="callNativeAsync()">分享async</a>
+    <script>
+      function downloadApp() {
+        location.href = 'https://itunes.apple.com/app/apple-store/id1126218840';
+      }
+
+      function goMine() {
+        window.postMessage(JSON.stringify({ type: 'navigate', routeName: 'Mine' }));
+      }
+      //http://f.hiphotos.baidu.com/image/pic/item/503d269759ee3d6db032f61b48166d224e4ade6e.jpg
+
+      function share() {
+        window.postMessage(JSON.stringify({
+          type: 'share',
+          data: {
+            title: 'yo',
+            desc: 'yoyoyo',
+            link: 'https://www.baidu.com',
+            imageUrl: 'http://f.hiphotos.baidu.com/image/pic/item/503d269759ee3d6db032f61b48166d224e4ade6e.jpg'
+          }
+        }))
+      }
+
+      function callNativeAsync() {
+        window.postMessageAsync(JSON.stringify({
+          type: 'share',
+          data: {
+            title: 'yo',
+            desc: 'yoyoyo',
+            link: 'https://www.baidu.com',
+            imageUrl: 'http://f.hiphotos.baidu.com/image/pic/item/503d269759ee3d6db032f61b48166d224e4ade6e.jpg'
+          }
+        }))
+          .then((res) => {
+            setTimeout(() => alert('res: ' + JSON.stringify(res)), 1000);
+          })
+          .catch((e) => {
+            setTimeout(() => alert('error: ' + JSON.stringify(e)), 1000);
+          });
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="/documents/development/css/documentation.css">
+    <style type="text/css">
+      li { font-size:26px; color:gray }
+    </style>
+    <script type="text/javascript" src="/lib/utils/URI.js"></script>
+    <script type="text/javascript">
+      var uri = URI(window.location.href);
+      document.title = uri.filename();
+    </script>
+  </head>
+  <body>
+
+  figture:<br />
+  <img src="figure - resp chain 1.png">
+  code snippet:<br />
+  <pre>
+  void Handler::HandleRequest (Request* theRequest) {
+    switch (theRequest->GetKind()) {
+    case Help:
+    // cast argument to appropriate type HandleHelp((HelpRequest*) theRequest); break;
+    case Print:
+    HandlePrint((PrintRequest*) theRequest); // ...
+    break;
+    default: // ...
+    break;
+    }
+   }
+ 
+  </pre><br />
+
+<p>
+   改进思路：Handler里面既包含使用帮助相关的数据，也包含向用户展示这个数据的代码；如果把展示帮助文字的代码分离出去，把数据部分抽象成一个树状结构的数据提供者，那么展示模块只需要通过接口访问到数据，不同的类型的展示模块可以用不同的姿势自由的展示数据，避免if/switch，逼格更高，这是好处之一， 另一个好处是，数据模块可以进一步扩充成为上下文信息模块，提供其它的数据服务，比如埋点
+</p>
+<p>
+  这种优化，本质上是认识到理想的模块的职责应该是单一的，尽量在开发和设计中做拆分，把大的复杂的功能拆分成更小、更优雅的小模块，复杂的功能可以通过组合这些小的模块来实现。
+</p>
+
+  <iframe src="drawing.svg" width="600" height="600" frameborder="0"></iframe>
+  </body>
+</html>

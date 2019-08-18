@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" type="text/css" href="/documents/development/css/style.css" >
+    <link rel="stylesheet" type="text/css" href="/documents/development/css/documentation.css" >
+    <script type="text/javascript" src="/lib/utils/URI.js"></script>
+    <script type="text/javascript">
+      var uri = URI(window.location.href);
+      document.title = uri.filename();
+    </script>
+  </head>
+  <body>
+  <br />
+<h1>一，目录结构</h1>
+<ul>
+  <li>应该建立清晰可扩展的目录结构，便于维护和审查。  </li>
+  <li>推荐使用CocoaPods来管理第三方代码。</li>
+  <li>
+    <a href="http://mp.weixin.qq.com/s?__biz=MzIwMTQwNTA3Nw==&mid=400115827&idx=1&sn=bca95067bc6e346c6e38411b5341029a&scene=1&srcid=1026viGDkTLnlBxHC2DU3YJF&from=groupmessage&isappinstalled=0#rd">推荐一个合理iOS/Mac[项目目录结构]</a>
+    <pre>
+ProjectRoot
+|
+|--ProjectName.xcodeproj
+|
+|--ProjectName.xcworkspace
+|
+|--ProjectName
+|   |--Common
+|   |    |-- XXUIKit
+|   |    |-- XXUtility
+|   |    
+|   |--Consts（项目共用的常量）
+|   |--Models
+|   |--Sections（App各部分版块）
+|   |    |-- Section1
+|   |           |-- Controllers
+|   |           |-- Views
+|   |    |-- Section2
+|   |           |-- Controllers
+|   |           |-- Views
+|   |  
+|   |--Vendors
+|   |--Resources
+|   |     |-- images.xcassets
+|   |     |-- Main.Storyboard
+|   
+|--Podfile
+|
+|--Podfile.lock
+|
+|--Pods    
+|    |--XXFoundation
+|         | -- XXUIKit
+|         | -- XXUtility
+|
+|    |--ThirdParty1
+|    |--ThirdParty2</pre>
+    </li>
+    <li>
+  关于CocoaPods的版本管理  
+  <blockquote>
+  建议采用CocoaPods官网推荐的管理方式，即把Podfile, Podfile.lock, Pods/全部加入版本库
+  在添加新pod项目的时候使用pod install，一般不用pod update命令，除非需要更新某个pod为   
+  最新版，则使用pod update &lt;podname&gt;
+  </blockquote>
+    </li>
+  </ul>
+
+  <h1>二，代码布局</h1>
+  <ul>
+    <li>
+  推荐把文件划分为多个段落，每个段落前面增加#pragma mark编译指令  
+  这样各段代码在Xcode工具栏的方法菜单里面分割开来，便于浏览代码 <br />
+  一个合理的代码布局：
+  <pre>#pragma mark - Lifecycle  
+例：-init, -dealloc  
+
+#pragma mark - NSCopying  
+#pragma mark - Override  
+例：-viewDidload, -viewWillAppear:  
+
+#pragma mark - NSCoding  
+#pragma mark - Custom Accessors  
+#pragma mark - IBActions  
+#pragma mark - Protocol conformance  
+#pragma mark - Private  </pre>
+  </li>
+</ul>
+
+
+<h1>三，命名约定</h1>
+<h2>3.1 基本命名原则</h2>
+<ul>
+  <li>骆驼风格</li>
+  <li>
+    代码越简洁越明确越好，但是不能因为过度简洁而导致语义不明确：
+    <table>
+      <tr>
+      <th>代码</th>
+      <th>评价</th>
+      </tr>
+
+      <tr>
+      <td>insertObject: atIndex:   </td>
+      <td>好 </td>
+      </tr>
+
+      <tr>
+        <td>insert:at:     </td>
+        <td>不明确，什么被插入？at指什么   </td>
+      </tr>
+    </table>
+  </li>
+  <li>
+通常使用英文单词命名类，变量和方法，避免使用缩写，公认通用的缩写除外：alloc, alt, app, calc, dealloc, func, horiz, info, init, int, max, min, msg, nib, pboard, rect, Rep, temp, vert
+  </li>
+
+  <li>
+    前缀的使用
+    <ul>
+      <li>2～3个大写字母组成</li>
+      <li>适用于类，协议，全局函数，常数，自定义结构体</li>
+      <li>不要滥用前缀，对于仅在本项目内使用的类，协议，函数等，不使用前缀</li>
+    </ul>
+  </li>
+</ul>
+
+<h2>3.2 类命名、协议命名</h2>
+<ul>
+  <li>类名协议名的首字母大写,写使用首字母大写的形式分割单词</li>
+  <li>只有在需要的时候才使用大写前缀</li>
+  <li>与使用该协议的类名相关，一般不要完全相同，例如UITableView类与UITableViewDelegate，一个例外情况是@class NSObject与@protocol NSObject，NSObject协议包含许多不相关的方法，并且一半只有NSObject类去直接实现这个协议</li>
+</ul>
+
+<h2>3.3 类别命名</h2>
+<ul>
+  <li>类别名应该能够表达扩展的接口的作用，文件名推荐使用“原类名+扩展名”，一个例外情况是多个相关的类别包含在同一个文件里，应该为文件起一个能够涵盖所有类别的含义的名字</li>
+</ul>
+
+<h2>3.4 方法命名</h2>
+<ul>
+  <li>小写字母开头，不要用前缀。全局函数除外：TIFFRepresentation (NSImage)。  </li>
+  <li>避免使用下划线作为方法名的前缀</li>
+  <li>方法名中不应包含"do"或"does"等没有信息量的词</li>
+  <li>
+  不要使用"and"去连接多个参数的关键词
+  <table>
+    <tr>
+      <th>代码</th>
+      <th>评价</th>
+    </tr>
+    <tr>
+      <td>- (int)runModalForDirectory:(NSString *)path file:(NSString *) name types:(NSArray     *)fileTypes;</td>
+      <td>right</td>
+    </tr>
+    <tr>
+      <td>- (int)runModalForDirectory:(NSString *)path andFile:(NSString *)name andTypes:(NSArray *)fileTypes; </td>
+      <td>wrong</td>
+    </tr>
+  </table>
+  </li>
+  <li>
+  一个例外是方法包含着两个分开的动作，此时可以用and去连接它们；例：  
+  <pre>- (BOOL)openFile:(NSString *)fullPath withApplication:(NSString *)appName andDeactivate:(BOOL)flag;</pre>
+  </li>
+  <li>
+  在属性的名称中，不要通过用分词形式将动词转换为形容词
+  <table>
+    <tr>
+      <th>代码</th>
+      <th>评价</th>
+    </tr>
+    <tr>
+      <td>- (void)setAcceptsGlyphInfo:(BOOL)flag;  </td>
+      <td>right</td>
+    </tr>
+    <tr>
+      <td>- (void)setGlyphInfoAccepted:(BOOL)flag; </td>
+      <td>wrong</td>
+    </tr>
+    <tr>
+      <td>- (BOOL)glyphInfoAccepted; </td>
+      <td>wrong</td>
+    </tr>
+  </table>
+  </li>
+  <li>可以使用情态动词(动词前面“can”、“should”、“will”等)来修饰属性名 </li>
+  <li>
+    不要使用get作为方法名称前缀，除非方法间接返回多个对象/值。  
+    <ul>
+      <li>- (void)getLineDash:(float *)pattern count:(int *)count phase:(float *)phase;</li>
+    </ul>
+  </li>
+  <li>参数前的单词要能够描述参数的意义</li>
+  <li>
+   存取器方法 
+   <ul>
+     <li>如果属性表示的是名词意思，格式如：- (type)noun;     - (void)setNoun:(type)aNoun;</li>
+     <li>
+     如果属性表示的是形容词意思，格式如：- (BOOL)isAdjective;    - (void)setAdjective:(BOOL)flag;
+    也就是说，形容词作为property应该使用下面的声明
+      <pre>@property (assign, nonatomic, getter = isAdjective) BOOL adjective;</pre>
+    </li>
+   </ul>
+  </li>
+
+  <li>可以使用情态动词(动词前面“can”、“should”、“will”等)进一步说明属性意思</li>
+  <li>
+    委托方法的名字的开头指明发消息的对象（委托者）的类型。例如：
+    <pre>- (BOOL)tableView:(NSTableView *)tableView shouldSelectRow:(int)row; </pre>
+  </li>
+</ul>
+
+<h2>3.4 函数命名</h2>
+<ul>
+  <li>全局函数一般用所在模块的名称缩写作为前缀开头，并且前缀后的首字母大写。</li>
+</ul>
+
+<h2>3.5 变量命名</h2>
+<ul>
+  <li>对于参数命名，不要使用“pointer”，参数的类型比参数的名字更能说明它是否是指针。</li>
+  <li>
+    对于参数名，以下的一些方法中的关键词通常跟固定的参数搭配：
+    <pre>...action:(SEL)aSelector
+...alignment:(int)mode
+...atIndex:(int)index
+...content:(NSRect)aRect
+...doubleValue:(double)aDouble
+...floatValue:(float)aFloat
+...font:(NSFont *)fontObj
+...frame:(NSRect)frameRect
+...intValue:(int)anInt
+...keyEquivalent:(NSString *)charCode
+...length:(int)numBytes
+...point:(NSPoint)aPoint
+...stringValue:(NSString *)aString
+...tag:(int)anInt
+...target:(id)anObject
+...title:(NSString *)aString</pre>
+  </li>
+  <li>成员变量应该混合大小写，并以下划线作为前缀，如 _usernameTextField。</li>
+</ul>
+
+<h2>3.6 文件的命名</h2>
+<ul>
+  <li>一般与类名称相同</li>
+  <li>
+    头文件
+    <ul>
+      <li>为别的框架中类增加API：如果你在一个框架中声明的方法，是另一个框架中类的分类，
+  名字为原来类的名字拼接上“Additions”。一个例子为Applicatiion kit 的NSBuddleAdditions.h头文件。</li>
+    </ul>
+  </li>
+</ul>
+
+<h1>四，格式化</h1>
+<h2>4.1 空格</h2>
+<ul>
+  <li>if, while, for与左括号 "(" 之间加一个空格</li>
+  <li>参数列表与左括号 "{" 之间加一个空格</li>
+  <li>二元运算符，三目运算符与操作数之间加一个空格  </li>
+  <li>
+    类名与包含类别名的括号之间，应该以一个空格分隔。
+    <pre>// Extending a framework class:
+@interface NSString (GTMStringParsingAdditions)
+- (NSString *)gtm_foobarString;
+@end</pre>
+  </li>
+</ul>
+<h2>4.2 缩进  </h2>
+<ul>
+  <li>不要在代码中使用制表符</li>
+  <li>每次缩进2个空格，block除外</li>
+  <li>设置方法：Xcode > Preferences > Text Editing > Identation</li>
+</ul>
+<h2>4.3 行宽  </h2>
+<ul>
+  <li>代码中的每行最多有100个字符</li>
+  <li>设置方法： Xcode > Preferences > Text Editing > Spage guide，可以在编辑器100字符处显示竖线。</li>
+</ul>
+<h2>4.4 空行</h2>
+<ul>
+  <li>import指令之后加空行</li>
+  <li>方法之间加空行</li>
+  <li>方法内部相对独立的逻辑块之间加空行</li>
+</ul>
+<h2>4.5 OBjective-C方法的书写格式</h2>
+<ul>
+  <li>
+   方法调用时，所有参数应该在同一行。 
+   <pre>[myObject doFooWith:arg1 name:arg2 error:arg3];</pre>
+  </li>
+  <li>
+   -或者+与返回类型之间，需要有空格。参数列表中，只有参数之间有空格。方法应该像这样： 
+   <pre>- (void)doSomethingWithString:(NSString *)theString {
+  ;
+}</pre>
+  </li>
+  <li>
+   如果一行有非常多的参数，更好的方式是将每个参数单独拆成一行。如果使用多行，将每个参数前的冒号对齐。 
+<pre>- (void)doSomethingWith:(GTMFoo *)theFoo
+                   rect:(NSRect)theRect
+               interval:(float)theInterval {
+  ;
+}</pre>
+  </li>
+  <li>
+   当第一个关键字比其它的短时，保证下一行至少有4个空格的缩进。这样可以使关键字垂直对齐，而不是使用冒号对齐： 
+<pre>- (void)short:(GTMFoo *)theFoo
+          longKeyword:(NSRect)theRect
+    evenLongerKeyword:(float)theInterval
+                error:(NSError **)theError {
+  ;
+}</pre>
+  </li>
+</ul>
+<h2>4.6 block书写格式</h2>
+<ul>
+  <li>block内部代码缩进4个空格</li>
+  <li>
+  如果block能一行写完，不要分行 ，并且注意单行语句与左右花括号之间有空格
+  <pre>[operation setCompletionBlock:^{ [self onOperationDone]; }];</pre>
+  </li>
+  <li>
+    如果有分行，右大括号必须与block声明的那一行的第一个字符对齐
+<pre>[operation setCompletionBlock:^{
+
+    [self.delegate newDataAvailable];
+
+}];</pre>
+  </li>
+  <li>如果block代码很多，比如，超过20行，建议移到外面用一个临时变量保存</li>
+  <li>如果block没有参数，在字符^{之间不要有空格，否则按照4.1.2，")"与"{"之间加空格</li>
+  <li>
+    包含内联block的调用可以让其代码段左对齐四空间缩进，这有助于理解包含多个内嵌块的调用，如  
+    <pre>[myObject doSomethingWith:arg1
+
+      firstBlock:^(Foo *a) {
+
+      // ...
+
+  }
+
+  secondBlock:^(Bar *b) {
+
+      // ...
+
+  }];
+  
+  [[SessionService sharedService]
+
+      loadWindowWithCompletionBlock:
+
+          ^(SessionWindow *window) {
+
+              if (window) {
+
+                  [self windowDidLoad:window];
+
+              } else {
+
+                  [self errorLoadingWindow];
+
+              }
+
+          }];</pre>
+  </li>
+</ul>
+
+<h2>4.7 容器常量</h2>
+<ul>
+  <li>使用Xcode 4.4或更高版本的的项目，鼓励使用容器常量。</li>
+  <li>
+   如果集合内容只有一行，开始中括号[之后和结束中括号]之前需要一个空格。 
+   <pre>NSArray* array = @[ [foo description], @"Another String", [bar description] ];
+NSDictionary* dict = @{ NSForegroundColorAttributeName : [NSColor redColor] };</pre>
+  </li>
+  <li>
+   如果被分成了多行，其内容需两个空白字符缩进，右括号位于新行并与声明左中括号的行开头对齐 
+<pre>NSArray* array = @[
+
+  @"This",
+
+  @"is",
+
+  @"an",
+
+  @"array"
+
+];</pre>
+  </li>
+  <li>
+   对于字典常量，冒号后面应该有一个空格（值是否对齐是可选的） 
+<pre>NSDictionary* option1 = @{
+
+  NSFontAttributeName : [NSFont fontWithName:@"Helvetica-Bold" size:12],
+
+  NSForegroundColorAttributeName : fontColor
+
+};</pre>
+  </li>
+</ul>
+
+<h1>五，注释风格</h1>
+<h2>5.1 接口的注释</h2>
+公共接口的每个方法，都应该有注释来解释它的作用、参数、返回值以及其它影响。
+<h2>5.1 文档化注释</h2>
+尽量采用appledoc要求的[格式](http://www.cnblogs.com/zyl910/archive/2013/06/07/objcdoc.html)来编写文档化注释。
+<h3>5.1.1 单行注释</h3>
+<ul>
+  <li>
+  在很多时候只需写一个简要描述就够了，这时最好使用单行注释
+  <blockquote>/// 简要描述.</blockquote>
+  </li>
+</ul>
+<h3>5.1.2 多行注释</h3>
+<ul>
+  <li>
+   一个多行注释的模板 
+<pre>/**
+* @brief 带字符串参数的方法.
+*
+* @param  value 值.
+*
+* @return 返回value.
+*
+* @exception NSException 可能抛出的异常.
+*
+* @see someMethod
+* @see someMethodByInt:
+* @warning 警告: appledoc中显示为蓝色背景, Doxygen中显示为红色竖条.
+* @bug 缺陷: appledoc中显示为黄色背景, Doxygen中显示为绿色竖条.
+@property (nonatomic,strong) NSString* str;
+*/</pre>
+  </li>
+  <li>多行注释存在“段”的概念，以内容为空的行作为分段依据。第一段识别为简要描述，然后将后面的段识别为详细描述</li>
+  <li>如果省略中间各行行首的星号（*），appledoc与doxygen也能识别。当考虑到注释缩进、美观性、兼容性，还是建议不要省略行首星号</li>
+  <li>
+   有时需要在一段话中引入一小段代码，这时可以用重音符（`）将那一段代码给包起来 
+<pre>/**
+* 引用短代码, 如 `someMethodByStr:` .
+*/</pre>
+  </li>
+  <li>
+   代码块适用于需要在注释中放置多行代码的情况。具体办法是在每行内容的前面加一个tab字符 
+<pre>/**
+* 示例代码:
+*
+*     int sum=0;
+*     for(int i=1; i<=10; ++i) {
+*         sum += i;
+*     }
+*/</pre>
+  </li>
+  <li>其他注释格式约定请参照    ****文献****</li>
+</ul>
+<h2>5.2 TODO</h2>
+TODO(您的用户名): 所要采取行动的明确描述
+<h2>5.3 注释的实效性</h2>
+<ul>
+  <li>代码更新时，不要忘记更新注释</li>
+  <li>不需要的注释及时删掉</li>
+</ul>
+
+<h1>六，语言偏好</h1>
+<h2>6.1 属性与实例变量</h2>
+<ul>
+  <li>如果允许，优先使用属性来访问编译器自动合成的实例变量，而不是直接定义实例变量</li>
+  <li>如果需要声明实例变量，用@private 或者 @protected声明。如要继承的实例变量用@protected声明。</li>
+  <li>如果一个实例变量是实例的访问属性(accessible attribute)，确保你已经写了相应的存取器方法。</li>
+  <li>
+   属性的声明 
+   类接口中的属性的声明必须紧跟着成员变量语句块。属性的定义必须在@implementation的类定义的最上方。
+  他们的缩进与包含他们的@interface以及@implementation语句一样。
+<pre>@interface MyClass : NSObject {
+
+ @private
+
+  NSString *_name;
+
+}
+
+@property(copy, nonatomic) NSString *name;
+
+@end</pre>
+  </li>
+</ul>
+<h2>6.2 常量</h2>
+<ul>
+  <li>
+  优先使用枚举类型，除非：
+  <ol>
+    <li>1. 整型常量之间没有什么联系 </li>
+    <li>2. 常量类型不是整型</li>
+  </ol>
+  </li>
+  <li>
+  优先使用下面的方式定义枚举类型
+<pre>typedef NS_ENUM(NSInteger, Test1) {
+
+//以下是枚举成员
+
+    Test1A = 0,
+
+    Test1B = 1,
+
+    Test1C = 2,
+
+    Test1D = 3
+
+};</pre>
+  </li>
+</ul>
+<h2>6.3 内存管理</h2>
+<ul>
+  <li>优先使用arc，除非链接到使用mrc的第三方代码，可以为不支持arc的源文件使用用-fno-objc编译选项</li>
+  <li>如果使用Xcode 4.2或者更新的版本，并且运行于64位Mac OS X10.7或者iOS5.0或者更高版本，优先选用ARC。</li>
+  <li>使用ARC的类应该直接包含预定义宏防止编译器使用手动引用计数。</li>
+  <li>所有权标识__unsafe_unretained 和 __weak应该被优先使用。</li>
+  <li>__strong变量默认不需要显示的标明。</li>
+  <li>而另一方面，属性应该总是指定strong关键字而不要依赖编译器默认。</li>
+  <li>委托对象不应该被retained。</li>
+  <li>
+   在使用ARC时，在@implementation声明实例变量是允许的。 
+   <pre>#if !defined(__has_feature) || !__has_feature(objc_arc)
+
+#error "This file requires ARC support."
+
+#endif
+
+ 
+
+#import "Foo.h"
+
+ 
+
+@implementation Foo {
+
+  Bar* __weak _bar;
+
+  Baz* __unsafe_unretained _baz;
+
+}
+
+// ...
+
+@end</pre>
+  </li>
+</ul>
+
+<h2>6.4 界面设计</h2>
+<ul>
+  <li>
+  一个有争议的问题：应该使用Interface Builder还是手写代码实现界面？请遵循几个原则：
+    <ul>
+      <li>跨项目的UI库应该通过Coding来实现</li>
+      <li>复杂琐碎的界面应该使用Interface Builder来设计</li>
+      <li>技术的选取应该以项目组整体的开发效率为出发点</li>
+    </ul>
+  </li>
+  <li>强烈推荐使用autolayout，推荐使用Masonry开源库用于快速建立约束规则</li>
+</ul>
+
+<h2>6.5 初始化</h2>
+<ul>
+  <li>注释并且明确指出你的类的指定的初始化器。
+  对于需要继承你的类的人来说，指定的初始化器十分重要。这样他们就可以只重写一个初始化器（可能是几个）
+  来保证他们的子类的初始化器会被调用。这也有助于将来别人调试你的类时，理解初始化代码的工作流程。</li>
+  <li>不要在init方法中，将成员变量初始化为0或者nil，这是冗余的。</li>
+  <li>在init和dealloc中避免使用存取方法</li>
+  <li>类型为NSString的属性使用copy存储类型</li>
+</ul>
+
+<h2>6.6 BOOL陷阱</h2>
+<ul>
+  <li>将常规整形转换成BOOL时要小心，不要直接将BOOL值与YES进行比较。赋值</li>
+  <li>当转换整形至BOOL时，使用三目操作符来返回YES或者NO</li>
+  <li>Objective-C的方法签名中，只使用BOOL。</li>
+  <li>对BOOL使用逻辑运算符（&amp;&amp;, || 和!）是合法的，返回值也可以安全地转换成BOOL，不需要使用三目操作符。</li>
+</ul>
+
+<h2>6.7 协议</h2>
+<ul>
+  <li>使用@protocol来定义回调API，如果不是所有的方法都必须实现，使用@optional</li>
+</ul>
+
+<h1>七，参考资料</h1>
+<a href="http://guides.cocoapods.org/using/using-cocoapods.html">cocoapods官方指南</a>
+<br />
+<a href="http://mp.weixin.qq.com/s?__biz=MzIwMTQwNTA3Nw==&mid=400115827&idx=1&sn=bca95067bc6e346c6e38411b5341029a&scene=1&srcid=1026viGDkTLnlBxHC2DU3YJF&from=groupmessage&isappinstalled=0#rd">项目目录结构</a>
+<br />
+<a href="http://www.cnblogs.com/zyl910/archive/2013/06/07/objcdoc.html">appdoc</a>
+<br />
+<a href="http://blog.csdn.net/jjunjoe/article/details/11190977">编码风格</a>
+<br />
+<a href="https://developer.apple.com/library/mac/documentation/Cocoa/Conceptual/CodingGuidelines/CodingGuidelines.pdf">代码风格</a>
+<br />
+  </body>
+</html>

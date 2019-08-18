@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="/documents/development/css/documentation.css">
+    <style type="text/css">
+      li { font-size:26px; color:gray }
+    </style>
+    <title>c++指向成员函数的指针</title>
+  </head>
+  <body>
+  <p>
+For simple commands that aren't undoable and don't require arguments, we can use a class template to parameterize the command's receiver. We'll define a template subclass SimpleCommand for such commands. SimpleCommand is parameterized by the Receiver type and maintains a binding between a receiver object and an action stored as a pointer to a member function.
+  </p>
+  <p>
+    <pre>template &lt;class Receiver&gt;
+class SimpleCommand : public Command {
+  public:
+    typedef void (Receiver::* Action)();
+    SimpleCommand(Receiver* r, Action a) : _receiver(r), _action(a) { }
+    virtual void Execute();
+  private:
+    Action _action;
+    Receiver* _receiver;
+};</pre>
+  </p>
+
+<p>
+ The constructor stores the receiver and the action in the corresponding instance variables. Execute simply applies the action to the receiver. 
+</p>
+
+<p>
+  <pre>template &lt;class Receiver&gt;
+void SimpleCommand&lt;Receiver&gt;::Execute () {
+  (_receiver->*_action)();
+}</pre>
+</p>
+
+<p>To create a command that calls Action on an instance of class MyClass, a client simply writes</p>
+<p><pre>MyClass* receiver = new MyClass; // ...
+Command* aCommand =
+new SimpleCommand&lt;MyClass&gt;(receiver, &amp;MyClass::Action); // ...
+aCommand-&gt;Execute();</pre></p>
+
+Keep in mind that this solution only works for simple commands. More complex commands that keep track of not only their receivers but also arguments and/or undo state require a Command subclass.
+
+<br />
+参考资料<br />
+http://stackoverflow.com/questions/151418/calling-a-c-function-pointer-on-a-specific-object-instance
+<br />
+http://stackoverflow.com/questions/8865766/get-a-pointer-to-object-member-function
+  <br />
+  </body>
+
+</html>

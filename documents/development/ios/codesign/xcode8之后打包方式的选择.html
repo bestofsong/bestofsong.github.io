@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" type="text/css" href="/documents/development/css/style.css" >
+    <link rel="stylesheet" type="text/css" href="/documents/development/css/documentation.css" >
+    <title>xcode8之后打包方式的选择</title>
+  </head>
+  <body>
+  <br />
+  <p>去年一直在用xcodebuild工具打包，直到去年底升级xcode8，脚本出错，然后又回到gui的老办法。</p>
+  <p>
+  最近修了修脚本，把描述文件的选择改为不直接用-exportProvisioningProfile选项指定描述文件，而是通过一个plist配置文件里面配置各种参数，其中包括method:'ad-hoc|app-store'。
+ 同时xcode工程文件配置为Automatic manage signing ，并且仍需要提前保证证书和描述文件存在。</p>
+
+ <p>现在脚本能工作了，不过仍然不太清楚当时脚本失败的具体原因，只记得报错证书还是描述文件找不到。</p>
+ <p>其实脚本早就能跑，不过看到console输出使用的证书是iPhone Developer: xxx，吓得我没敢用它。后来看到<a href="http://howtoprogram.eu/question/xcode-jenkins-use-xcodebuild-xcode-8-and-automatic-signing-in-ci-travis-jenkins-environments,24595">这个网页</a>才想起来，那个Developer证书是打包是用的，export操作使用的证书实际是发行证书，我通过xcode gui导出了一个appstore的包，和我脚本用的是同一个证书(security cms -D -i ~/embedded.mobileprovision输出的log里面的公钥证书DeveloperCertificates是相同的)，这才恍然大悟，脚本是好的！;]前天下午辛苦研究xmlstarlet和xpath的功夫没有白费;)</p>
+
+ <p>看来以后还是得看看wwdc，跟踪苹果大爷的进展，别掉队...</p>
+
+<br />
+ p.s 2017-04-05: <br />
+ <ol>
+   <li>解决一个证书相关的问题：切换开发者账号时，提示本地没有私钥证书但是后台有，想了半天，最后把后台的自动证书全删掉（删之前也把本地的删掉了，不过这应该是不需要的），然后xcode自动创建一个就好了</li>
+   <li>xcodebuild应该是具有自动选择描述文件和证书的功能的，只是不能自动创建描述文件和证书，今天我解决刚才提到的问题时，把本地的描述文件全部删除了，接着用xcodebuild打包，失败，没有描述文件，然后用xcode gui导出一个adhoc包，看到xcode自动创建了一个adhoc描述文件，成功后，再用xcodebuild操作，也成功了。</li>
+ </ol>
+
+<h3>参考链接</h3>
+<a href="http://stackoverflow.com/questions/9717268/what-is-the-binary-data-around-the-plist-in-a-provisioning-profile-file#comment30158987_11430478">http://stackoverflow.com/questions/9717268/what-is-the-binary-data-around-the-plist-in-a-provisioning-profile-file#comment30158987_11430478</a>
+  </body>
+</html>

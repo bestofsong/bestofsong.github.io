@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" type="text/css" href="/documents/development/css/style.css" >
+    <link rel="stylesheet" type="text/css" href="/documents/development/css/documentation.css" >
+    <script type="text/javascript" src="/lib/utils/URI.js"></script>
+    <script type="text/javascript">
+      var uri = URI(window.location.href);
+      document.title = uri.filename();
+    </script>
+  </head>
+  <body>
+
+  <p>
+<h2>App页面路由</h2>
+  </p>
+
+<p>
+最新文档地址:<a href="https://bestofsong.github.io/documents/development/ios/deep-link/navigate.html">https://bestofsong.github.io/documents/development/ios/deep-link/navigate.html</a>
+</p>
+
+<p>
+<p>文档只定义了mobile://xxx这种协议的语义，对于web页面和移动端交互的具体实现方式不做任何要求。
+  例如在iOS端可以通过a标签或者通过打开一个隐藏的iframe来打开mobile链接，
+  由iOS原生代码来处理这个链接（实际就是忽略mobile链接的跳转，parse链接里的数据，执行文档约定的功能），
+  安卓平台也是类似，可以通过alert截获mobile链接，也可以直接执行安卓暴露的js函数把链接作为参数传递。。
+</p>
+<br />
+
+<p>
+注1: 下面的接口类型和之前<a href="recorder-player-snshare.html">web页面对接原生音频功能的接口</a>是一致的，前端可以直接使用鹏远写的jsbridge库来调用。 <br>
+注2: callback_name是可选的，后台的配置不会有这个参数，前端如果需要回调的话就解析链接获取参数，通过jsbride发送（jsbridge会自动添加callback_name），回调的时机是页面成功跳转
+</p>
+<br />
+
+<p>
+默认操作正常的回调参数：{code:0, msg:’操作成功’, data?:{}}, ?代表参数可选，code=-1代表未知错误 <br>
+传入不同参数可以跳转到相应的页面：<br>
+</p>
+
+<h4>
+  接口：mobile://navigate?&lt;query&gt;  <br> <br>
+</h4>
+
+<ul>
+<li>
+    按话题/题型的练习/题目列表页: <br>
+    <ul>
+      <li>
+    page: 'practice_list', 页面名称 <br>
+      </li>
+      <li>
+    examinationId: numebr, 考试id，托福考试为1 <br>
+      </li>
+      <li>
+    textbookId: numebr, 教材id <br>
+      </li>
+
+      <li>
+    subjectId: number, 科目id <br>
+      </li>
+      <li>
+    tagId: number, 话题id <br>
+      </li>
+      <li>
+        type: number, 1代表话题，2题型 <br>
+      </li>
+      <li>
+        questionTypeId: number <br>
+      </li>
+      <li>
+    tagName: string, 话题名称<br>
+      </li>
+      <li>
+
+    callback_name?
+      </li>
+    </ul>
+</li> <br>
+
+<li>按套题的练习列表页: <br>
+    <ul>
+      <li>
+    page: 'practice_list', 页面名称 <br>
+      </li>
+      <li>
+    examinationId: numebr, 考试id，托福考试为1 <br>
+      </li>
+      <li>
+    textbookId: numebr, 教材id <br>
+      </li>
+      <li>
+    subjectId: number, 科目id <br>
+      </li>
+      <li>
+    packageId: number, 套题id <br>
+      </li>
+      <li>
+    callback_name?
+      </li>
+    </ul>
+</li> <br>
+
+<li>做题页: <br>
+    <ul>
+      <li>
+    page: 'exercise_detail', 页面名称 <br>
+      </li>
+      <li>
+        url: string, 由前端拼接的url encoded做题页的链接
+      </li>
+      <li>
+    callback_name?
+      </li>
+    </ul>
+</li> <br>
+
+<li>美恰咨询页面: <br>
+    <ul>
+      <li>
+    page: 'consult', 页面名称 <br>
+      </li>
+      <li>
+    callback_name?
+      </li>
+    </ul>
+</li> <br>
+
+<li>留学规划页面: <br>
+    <ul>
+      <li>
+    page: 'abroad_study_plan', 页面名称 <br>
+      </li>
+      <li>
+    callback_name?
+      </li>
+    </ul>
+</li> <br>
+
+<li>练习报告页: <br>
+    <ul>
+      <li>
+    page: 'exercise_report', 页面名称 <br>
+      </li>
+      <li>
+        url: string, 由前端拼接的url encoded做题页的链接
+      </li>
+      <li>
+    callback_name?
+      </li>
+    </ul>
+</li> <br>
+
+</ul>
+
+</p>
+  </body>
+</html>

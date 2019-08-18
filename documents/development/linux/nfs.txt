@@ -1,0 +1,7 @@
+配置Ubuntu nfs服务器, mac客户端连接Ubuntu nfs
+https://serverfault.com/questions/716350/mount-nfs-volume-on-ubuntu-linux-server-from-macos-client
+sudo mount -t nfs -o resvport 192.168.0.11:/mnt/mdisk4 /Users/wansongHome/mdisk4
+sudo service nfs-kernel-server start
+sudo exportfs -arv
+https://www.digitalocean.com/community/tutorials/how-to-set-up-an-nfs-mount-on-ubuntu-14-04
+

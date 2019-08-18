@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" type="text/css" href="/documents/development/css/style.css" >
+    <link rel="stylesheet" type="text/css" href="/documents/development/css/documentation.css" >
+    <title>设计模式：Visitor</title>
+  </head>
+  <body>
+  <div class="content">
+
+  <h2>Visitor Pattern -- 被忽视的设计模式</h2>
+  <blockquote>
+  <p>My Most Important C++ Aha! Moments...Ever -- by Scott Meyers</p>
+  ...
+  <p>I don’t recall having a particular problem following the mechanics of the Visitor design pattern, but it never made any sense to me. I just couldn’t grasp how the pieces fit together. Then, one day, I made a fundamental realization: the Visitor Pattern has <u>nothing to do with visitation</u>. Rather, it’s a way to design hierarchies so that new virtual-acting functions can be added without changing the hierarchies. Once I grasped that, the pattern was easy to understand. But the name was a real stumbling block for me, even though Design Patterns documents this as part of the pattern’s intent:</p>
+ <p>Visitor lets you define a new operation without changing the classes of the elements on which it operates.</p>
+ ...
+  </blockquote>
+
+  <h2>Visitor模式</h2>
+  <ul>
+    <li>Visitor封装了对一个数据结构的元素的访问操作，增加新的操作时不需要改变节点元素的代码。<a href="https://item.jd.com/1098650929.html">《Design pattern: Elements of Reusable Object-Oriented Software》 -- GoF</a></li>
+    <li>面向对象编程和软件工程采用Visitor模式分离算法和算法所操作的数据结构。<a href="https://en.wikipedia.org/wiki/Visitor_pattern">Wikipedia</a></li>
+  </ul>
+
+  <a class="figure" href="https://en.wikipedia.org/wiki/Visitor_pattern">
+    <img src="Visitor_design_pattern.svg.png" /> 
+  </a>
+
+  <h2>例子</h2>
+  假设需要编写一个简易的markdown编辑器，解析markdown标记的工作已经完成，解析的结果如下：
+  <pre>
+    public class Document {
+      private List&lt;DocumentPart&gt; m_parts;
+    }
+  </pre>
+  其中DocumentPart是文档节点抽象类，节点类层次如下：
+  <pre>
+    public abstract class DocumentPart {
+      public string Text { get; private set; }
+    }
+
+    public class PlainText : DocumentPart { }
+
+    public class BoldText : DocumentPart { }
+
+    public class Hyperlink : DocumentPart {
+      public string Url { get; private set; }
+    }
+  </pre>
+
+  现在的目的是输出html格式的文档。显然不应该直接通过DocumentPart及其子类来实现，否则下次如果需要输出纯文本，或者latex文档，就需要修改要么修改DocumentPart及三个子类代码，增加相关的操作，不符合开放封闭原则。Visitor模式的解决方式是文档节点提供访问数据的接口accept，把不同格式的输出操作封装在Visitor类，不同的输出格式由Visitor的对应派生类实现。一个节点"accept"一个Visitor，把数据交给Visitor进行输出。
+
+  <br><br>
+  DocumentPart类实现accept接口：
+
+  <pre id="nodes">
+    public abstract class DocumentPart {
+      public string Text { get; private set; }
+      <b>public abstract void Accept(IVisitor visitor);</b>
+    }
+
+    public class PlainText : DocumentPart { 
+      public override void Accept(IVisitor visitor) {
+        <b>visitor.Visit(this);</b> // visitor.VisitPlainText(this);
+      }
+    }
+
+    public class BoldText : DocumentPart { 
+      public override void Accept(IVisitor visitor) {
+        <b>visitor.Visit(this);</b> // visitor.VisitBoldText(this);
+      }
+    }
+
+    public class Hyperlink : DocumentPart {
+      public string Url { get; private set; }
+
+      public override void Accept(IVisitor visitor) {
+        <b>visitor.Visit(this);</b> // visitor.VisitHyperlink(this);
+      }
+    }
+
+    public class Document {
+      private List&lt;DocumentPart&gt; m_parts;
+
+      public void Accept(IVisitor visitor) {
+        foreach (DocumentPart part in this.m_parts) {
+          part.Accept(visitor);
+        }
+      }
+    }
+  </pre>
+
+  visitor类层次：
+  <pre>
+    public interface IVisitor {
+      void Visit(PlainText docPart);
+      void Visit(BoldText docPart);
+      void Visit(Hyperlink docPart);
+    }
+
+    public class HtmlVisitor : IVisitor {
+      public string Output { 
+        get { return this.m_output; }
+      }
+      private string m_output = "";
+
+      public void Visit(PlainText docPart) {
+        this.Output += docPart.Text;
+      }
+
+      public void Visit(BoldText docPart) {
+        this.m_output += "&lt;b&gt;" + docPart.Text + "&lt;/b&gt;";
+      }
+
+      public void Visit(Hyperlink docPart) {
+        this.m_output += "&lt;a href=\"" + docPart.Url + "\"&gt;" + docPart.Text + "&lt;/a&gt;";
+      }
+    }
+      
+  </pre>
+
+  按照这种设计，输出html文档的客户代码就非常简单了
+  <pre>
+    Document doc = ...;
+    HtmlVisitor visitor = new HtmlVisitor();
+    doc.Accept(visitor);
+    Console.WriteLine("Html:\n" + visitor.Output);
+  </pre>
+
+  如果以后需要再输出其他格式的文档，只需要增加一个Visitor的子类，实现对不同类型节点的访问的接口，来替代上面的HtmlVisior就可以了。代码：
+  <pre>
+    public class LatexVisitor : IVisitor {
+    public string Output { 
+      get { return this.m_output; }
+    }
+    private string m_output = "";
+
+    public void Visit(PlainText docPart) {
+      this.Output += docPart.Text;
+    }
+
+    public void Visit(BoldText docPart) {
+      this.m_output += "\\textbf{" + docPart.Text + "}";
+    }
+
+    public void Visit(Hyperlink docPart) {
+      this.m_output += "\\href{" + docPart.Url + "}{" + docPart.Text + "}";
+    }
+  }
+  </pre>
+
+
+
+  <a href="#nodes"><h2>关于函数重载：</h2></a>
+  上面的代码，所有的文档节点子类实现accept方法的代码都只有一行，即
+  <pre>aVisitor.visit(this)</pre>
+  那是不是可以在接口类DocumentPart里面把这行代码作为一个默认的实现呢？答案是不可以。子类节点的accept方法的实现只是看起来长得像都是visitor.visit(this_node)，实际是不同的。涉及到C++/Java的函数重载feature -- 在编译阶段，具有不同的visit实参类型的方法调用被绑定到编译器隐式实现的参数类型编码的函数名。例如，对于HyperLink，编译后visitor.visit(this)里面的visit函数可能类似这样：
+  <pre>visitor.visit_HyperLink(this)</pre>
+  关于这点，Gof书中解释的很清楚：
+  <blockquote>
+    We could use function overloading to give these operations the same simple name, like Visit, since the operations are already differentiated by the parameter they're passed. There are pros and cons to such overloading. On the one hand, it reinforces the fact that each operation involves the same analysis, albeit on a different argument. On the other hand, that might make what's going on at the call site less obvious to someone reading the code. It really boils down to whether you believe function overloading is good or not. 我们可以利用函数重载给这些函数起同一个名字比如Visit，这是因为根据实参类型的不同是能够区分所绑定的操作的。这种函数重载有好处也有坏处。一方面，函数重载能够强调不同函数都是对节点的分析操作。另一方面，对于代码的读者来说，函数重载在调用现场实际掩盖了一些信息。到底是否采用函数重载还是取决于个人喜好。
+  </blockquote>
+  实际上Gof书中accept的实现代码就没有用到函数重载，而是直接写明对visitor发送哪种消息（个人比赞同这种做法)
+  <pre>visitor.visitHyperLinkNode(this)</pre>
+
+
+
+  <h2>关于double dispatch</h2>
+  Visitor模式实际是通过double dispatch思想降低了节点数据和数据的访问之间的耦合。
+  <br><br>
+  首先什么是single dispatch：
+  <blockquote>
+   In single-dispatch languages, two criteria determine which operation will fulfill a request: the name of the request and the type of receiver.(对于single dispatch的语言，一个请求的实现取决于两个方面：请求的名字和接收对象的类型)(Gof书)(也就是通常说的多态)
+  </blockquote>
+  Gof书给double dispatch的定义：
+  <blockquote>
+   "Double-dispatch" simply means the operation that gets executed depends on the kind of request and the types of two receivers. Accept is a double-dispatch operation. Its meaning depends on two types: the Visitor's and the Element's. Double-dispatching lets visitors request different operations on each class of element.(double dispatch就意味着一个操作的执行依赖于请求的名字和两个接受者。Accept就是一个double dispatch操作，他的具体含义依赖具体的数据节点和具体的visitor对象。double-dispatch允许不同类型的visitor对不同类型的数据节点请求不同的操作。)
+  </blockquote>
+  double dispatch的概念在一些语言中有专门的语法支持(CLOS)。了解double dispatch，可以有助于更好地理解Visitor模式，也可以帮我们在分析和设计时提供参考。<br>
+  
+
+
+  <h2>跟其他设计模式配合</h2>
+  Visitor模式仅仅包含非常有限的责任：节点的accept操作和visitor的visit操作。因此非常容易和其他代码进行集成，例如节点是存在一个二叉树中，需求是中序遍历，那么很容易写出类似下面的代码（迭代器模式）：
+  <pre>
+    BinaryTree<T>::InOrderIterater beg = container.begin();
+    for (; beg !== container.end(); beg++) {
+      beg ->accept(visitor);
+    }
+  </pre>
+
+
+
+  <h2>适用范围</h2>
+  <ul>
+    <li>不适用于节点类型频繁增加的场景，因为每增加一个新节点，Visitor接口就需要增加一个访问该节点的操作，全部已有的Visitor子类都需要修改。在这种情况下，只好把对数据的操作直接写在节点类里面。</li>
+    <li>节点的类型可以是任意类型，而不必全都属于一个继承层次。
+  </ul>
+  
+  
+
+  <h2>一个应用</h2>
+  Gof书中讲到责任链模式用的例子，我窃以为可以借鉴Visitor模式double dispatch的思想更好地实现。
+  <img src="chain of responsibility.png" alt="">
+  <p>场景简述如下：一个gui程序，需要在一些页面和UI组件上增加提供帮助信息的提示按钮，用户点击按钮，弹出上下文相关的帮助信息。所有组件通过实现一个HandleRequest接口弹出帮助信息，或者打印出来。可能一个UI组件的帮助信息不是直接关联组件自身的，而是来自其父组件甚至祖先组件（也可能是兄弟组件），此时组件会把HandleRequest转发给父组件（或兄弟组件），直到有一个组件响应或者传递到根组件为止。</p>
+  
+  <pre>
+    void Handler::HandleRequest (Request* theRequest) {
+      switch (theRequest->GetKind()) {
+        case Help:
+          // cast argument to appropriate type
+          HandleHelp((HelpRequest*) theRequest);
+          break;
+        case Print:
+          HandlePrint((PrintRequest*) theRequest); // ...
+          break;
+        default: // ...
+          break;
+      }
+    }
+  </pre>
+  <p>书中的实现是在组件实现的HandleRequest函数里，根据不同的请求类型，执行不同的操作。虽然可行，但是扩展性不好。如果仅仅考虑向组件获取信息这个场景，可以用Visitor模式更好地实现，因为获取帮助信息恰好本身就是一种操作（展示）数据的方式，套用Visitor模式毫无违和感。不过visit的过程需要稍加修改。</p>
+  <pre>
+    void AbcNode::HandleVisit (Visitor* helpVisitor) {
+      if (!helpVisitor.visitAbcNode(this)) {
+        BaseNode::HandleVisit(helpVisitor);
+      }
+    }
+  </pre>
+  <p>HelpVisitor专门用来访问当前节点的帮助信息。可以给visit接口增加返回值（或输出参数），来表示是否继续访问下一个节点。只要HelpVisitor访问到一个包含帮助信息的节点，就返回true表示已经完成访问，可以终止链式调用。这相当于结合两种设计模式：责任链和Visitor模式。</p>
+  <p>这种优化不一定总是合适的。具体做法要看实际场景。比如如果责任链需要修改UI组件本身的状态，那就不适合用Visitor模式。还是需要由UI组件自己响应请求。总结起来，一个功能需要放在具有足够的上下文的模块里实现，否则实现功能的模块不具有足够的信息，只好向其他模块交互，会出现模块间耦合过多的情况。</p>
+
+  </div>
+  </body>
+</html>
+
+
+
+

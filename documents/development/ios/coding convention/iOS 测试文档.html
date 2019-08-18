@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" type="text/css" href="/documents/development/css/style.css" >
+    <link rel="stylesheet" type="text/css" href="/documents/development/css/documentation.css" >
+    <title>iOS测试文档</title>
+  </head>
+  <body>
+为了提高代码质量以及方便代码重构或更新代码后进行回归测试，我们规定开发者必须为所写代码提供单元测试，  
+如果有必要，对于UI相关的代码，也需要提供UI测试。本文档提供了iOS项目单元测试和UI测试相关概念和方法的介绍。
+
+<h1>一，基本原则</h1>
+<h2>1.1 测试先行</h2>
+每个模块在开始实现之前，需要先确定清晰的逻辑和接口，并编写单元测试，最后编写实现代码，运行单元测试。
+<h2>1.2 行为测试</h2>
+使用自然语言描述测试代码，提高测试的可读性，便于代码组织，有利于跟产品设计人员沟通。我们使用Kiwi实现行为测试。
+<h2>1.3 可测试性设计</h2>
+<h3>1.3.1 模块化设计</h3>
+合理使用MVC等设计模式，把逻辑模块、工具类方法单独抽象出来，做到低耦合、高内聚，便于编写单元测试，  
+不要把所有代码都堆到ViewController类里面，这样不利于阅读和测试。
+<h3>1.3.2 保持代码简单</h3>
+要定义清晰的接口和逻辑，保持函数/方法功能单一，便于测试和定位bug。    
+
+<h1>二，使用kiwi编写单元测试</h1>
+<h2>2.1 kiwi语法</h2>
+kiwi的书写格式与bdd大体上是对应的。  <br />
+kiwi
+<blockquote>
+<pre>describe(...)
+    context(...)
+        it(...)</pre>
+</blockquote>
+bdd
+<blockquote>
+<pre>story
+    scenario
+        given ... when ... then ...</pre>
+</blockquote>
+
+describe，context，it实际是全局函数，接收两个参数：  一个字符串作为测试用例的描述，一个dispatch_block_t类型的block作为执行的代码。describe，context是同义词，结合beforeEach等函数，可以用于构造测试环境，模拟测试模块的使用场景；  
+it主要的功能是断言。  
+其他比较重要的kiwi关键字为：
+<blockquote>
+  <pre>beforeAll(aBlock) - 当前scope内部的所有的其他block运行之前调用一次  
+afterAll(aBlock) - 当前scope内部的所有的其他block运行之后调用一次  
+beforeEach(aBlock) - 在scope内的每个it之前调用一次，对于context的配置代码应该写在这里  
+afterEach(aBlock) - 在scope内的每个it之后调用一次，用于清理测试后的代码  
+specify(aBlock) - 可以在里面直接书写不需要描述的测试  
+pending(aString, aBlock) - 只打印一条log信息，不做测试。这个语句会给出一条警告，可以作为一开始集中书写行为描述时还未实现的测试的提示。  
+xit(aString, aBlock) - 和pending一样，另一种写法。因为在真正实现时测试时只需要将x删掉就是it，但是pending语意更明确，因此还是推荐pending</pre>
+</blockquote>
+
+<h2>2.2 kiwi风格的期望（Expectation）</h2>
+实际的测试写在it里，是由一个一个的期望(Expectations)来进行描述的  
+期望相当于传统测试中的断言，要是运行的结果不能匹配期望，则测试失败。  
+在Kiwi中期望都由should或者shouldNot开头，并紧接一个或多个判断的的链式调用，大部分常见的是be或者haveSomeCondition的形式，如：
+<blockquote><pre>[stack shouldNotBeNil];  
+[[stack should] haveCountOf: 1];  
+[[stack should] beEmpty];  
+[[aObject should] equal: bObject];  </pre></blockquote>
+
+<h2>2.3 一个典型的kiwi单元测试</h2>
+<blockquote><pre>describe(@"Collection starting with no objects", ^{
+    __block MyCollection *collection;
+    beforeEach(^{
+        collection = [MyCollection new];
+    });
+    context(@"then adding 1 object", ^{
+        beforeEach(^{
+            MyObject *object = [MyObject new];
+            [collection addObject:object];
+        });
+        it(@"has 1 object", ^{
+            ...
+        });
+        context(@"then removing 1 object", ^{
+            beforeEach(^{
+                [collection removeObject:object];
+            });
+            it(@"has 0 objects", ^{
+                ...</pre></blockquote>
+<ul>
+  <li>典型的测试包括一个describe，descibe的第二个block参数内部可以包含多个context，context同样又可以包含多个it；  
+  在describe和context的block内部可以使用beforeEach(dispatch_block_t)，  
+  用来为当前作用域内的context及其内部嵌套的context提供测试前的配置，即这些context内部的每个it在运行之前会执行beforeEach的block</li>
+  <li>通过嵌套context以及beforeEach、afterEach、beforeAll、afterAll，可以层次化的构造任意复杂的测试场景</li>
+  <li>上面的代码把__block存储类型的变量声明写在describe block开始，为作用域内其他block提供读写访问。最外层的beforeEach生成一个待测试的类的实例，第二个beforeEach在每个相同作用域及更深层次的it被执行之前被调用，构造了一个非空的容器作为当前context内部所有it模块的测试环境。第三个beforeEach以此类推。</li>
+</ul>
+
+<h2>2.4 测试进阶</h2>
+<h3>2.4.1 基本概念</h3>
+<ul>
+  <li>桩（stub）  
+
+  程序中的一些对象具有不确定的状态（如时间，温度，网络错误等），那么测试的结果也是不确定的。这时需要用具有相同接口的假对象（即stub）来代替原有对象，  
+才能给出确定性的测试结果。另外，当被测试的代码耦合较多，可以使用stub把代码划分成多个模块，针对每个模块进行测试。</li>
+  <li>模拟对象（mock）  
+    mock与原有对象也具有相同的接口，我们赋予mock对象一些expectation，比如它的方法是否会被调用，如何被调用等，这些expectation与it模块具有相似的作用，它们对应传统测试的断言。例如可以为一个 mock 指定这样的期望：“这个 mock 应该收到以 X 为参数的 Y 方法，并规定它的返回为 Z。其中"应该收到以 X 为参数的 Y 方法"这个期望会在测试与其不符合时让你的测试失败，而“返回 Z” 这个描述行为更接近于一种 stub 的定义。</li>
+</ul>
+<h3>2.4.2 Stub</h3>
+kiwi为NSObject添加了类扩展，使我们可以对任意对象调用stub:andReturn方法，把它变成stub对象  
+<blockquote><pre>Person *person = [Person somePerson];   
+[person stub:@selector(name) andReturn:@“Tom”];</pre></blockquote>
+
+以后对改对象调用指定的方法时，会返回指定的返回值。
+<blockquote><pre>NSString *testName = [person name];   
+[ testName should] equal:@“Tom”];</pre></blockquote>
+
+<h3>2.4.3 Mock</h3>
+使用工厂方法+mock创建mock对象，使用receive:andReturn:withArguments为mock对象指定期望（expectation）。
+<blockquote><pre>id weatherForecasterMock = [WeatherForecaster mock];   
+[[weatherForecasterMock should] receive:@selector(resultWithTemprature:humidity:)  
+                          andReturn:someResult  
+                      withArguments:theValue(23),theValue(50)];</pre></blockquote>
+
+<h3>2.4.4 参数捕获</h3>
+可以使用参数捕获来访问世纪传递给mock对象的参数，如：
+<blockquote><pre>KWCaptureSpy *spy = [weatherForecasterMock captureArgument:@selector(resultWithTemprature:humidity:) atIndex:0];</pre></blockquote>
+上面的代码，当mock对象收到resultWithTemprature:humidity:消息后，通过spy.argument可以访问到传入的第一个参数。  
+
+<h3>2.4.5 异步测试</h3>
+使用expectFutureValue、shouldEventually进行异步测试，类似于使用条件变量等待某个事件发生。
+<blockquote><pre>context(@"Fetching service data", ^{
+        it(@"should receive data within one second", ^{
+            __block NSString *fetchedData = nil;
+            [[LRResty client] get:@"http://www.example.com" withBlock:^(LRRestyResponse* r) {
+                NSLog(@"That's it! %@", [r asString]);
+                fetchedData = [r asString];
+            }];
+            [[expectFutureValue(fetchedData) shouldEventually] beNonNil];
+        });
+    });</pre></blockquote>
+
+<h3>2.5 安装使用</h3>
+<ul>
+  <li>增加测试编译目标（SmartStudyUnitTests）</li>
+  <li>使用Cocoapods增加依赖项目
+  target 'SmartStudyUnitTests', :exclusive => true do
+  pod 'Kiwi'
+  end</li>
+  <li>更改SmartStudyUnitTests编译选项，增加对Kiwi的依赖和链接静态哭</li>
+  <li>添加链接选项 -ObjC -framework IOKit</li>
+</ul>
+
+<h1>三，使用KIF和苹果UI Test框架进行UI自动化测试</h1>
+<p>KIF 和Apple的UI Testing都是基于Apple 的 UI Accessibility 工作，其原理是利用屏幕上的 UI 元素进行分类和标记对UI元素进行定位，具体来说，将屏幕上的 UI 分类为像是按钮，文本框，cell 或者是静态文本 (也就是 label) 这样的类型，然后使用 identifier 来区分不同的 UI 元素。在程序设计过程中，我们使用Accessibility API为界面上的各元素赋予一段字符串作为标识符。标识符需要在屏幕上显示的所有UI元素之间唯一。</p>
+<p>测试程序与主程序的交互通过XCUIApplication类型的Proxy对象进行。除了可以通过Proxy对象向App发送各种交互的操作（tap, swipe, pressForDuration等）以外，还可以在App启动前为app设置启动参数和环境变量。</p>
+
+<h2>3.1 KIF</h2>
+<ul>
+  <li>KIF可以和苹果的单元测试完美集成。我们可以使用它的API方便地操作UI元素。</li>
+  <li>与UI元素交互的API
+  <blockquote><pre>runBlock:complete:timeout:
+  tapViewWithAccessibilityLabel:
+  enterText:intoViewWithAccessibilityLabel:
+  setValue:forSliderWithAccessibilityLabel:
+  waitForViewWithAccessibilityLabel:</pre></blockquote></li>
+  <li>Test Case运行周期相关API：
+  <blockquote><pre>beforeAll
+  beforeEach
+  afterEach
+  afterAll</pre></blockquote></li>
+  <li>安装与使用：与kiwi相似，需要添加链接选项-ObjC</li>
+</ul>
+
+<h2>3.2 Apple UI Testing框架</h2>
+<ul>
+  <li>测试代码的主体部分使用Apple UI Testing编写，后者基于苹果的单元测试框架XCTest，因此代码结构与苹果传统的单元测试相似（代码见3.3）</li>
+  <li>测试代码录制：这是Apple UI Testing的一个巨大的优势，简单地点击Xcode的一个按钮就可以启动录制过程，以后在界面上的操作能够自动转换成OC测试代码，适合快速搭建UI测试原型</li>
+</ul>
+
+<h2>3.3 可重用的页面导航</h2>
+为了更好的重用UI界面之间的跳转操作，我们设计了ZKUINavigator类和ZKUINavigationNode类。
+其工作原理为：
+<ul>
+  <li>把全部UI界面当成一种树状结构，每个界面对应着ZKUINavigationNode的子类；</li>
+  <li>子结点对应着父结点保存的一组key－value对的一项，与key对应的value除了包含子结点的引用还包含跳转到子视图的block形式的操作；</li>
+  <li>当指定一个子结点名时，搜索这棵树可以得到跳转到目标视图的全部block，挨个执行这些block代码块，就能实现所需的跳转。</li>
+</ul>
+ZKUINavigator的使用方法：
+<ul>
+  <li>
+   增加一个新视图（SomeNewVC）： 
+   <ol>
+     <li>1. 增加ZKUINavigationNode的子类ZKUINavigationSomeNewVC</li>
+     <li>2. 实现敷类的nextJumps方法，该方法返回一个NSDictionary类，其key为从SomeNewVC能够跳转到的子视图的类名字，value为包含对应的跳转代码的block对象，返回上一层界面使用特殊的key以及对应的跳转block：
+     <blockquote><pre>- (NSDictionary*)nextJumps {
+  return
+  @{
+    kBackToLaskViewAction: ^{
+      XCUIApplication *app = [[XCUIApplication alloc] init];
+      XCUIElement *backButton = app.navigationBars.element.buttons[@"返回"];
+      [backButton tap];
+    },
+    NameOfClass(ZKNavigationQuestionAndAnswerView):^{
+      XCUIApplication *app = [[XCUIApplication alloc] init];
+      XCUIElement *section0Slice0 = [app.tables.element.staticTexts elementBoundByIndex:1];
+      [section0Slice0 tap];
+    }
+    };
+}</pre></blockquote></li>
+    <li>把新增的子类结点头文件添加到“ZKUINavigationNodesAll.h”文件里</li>
+    <li>到“ZKUINavigationNode.m”文件把新增的子类名添加到allRegisteredNodes方法返回的数组</li>
+    <li>在能够跳转到该界面的结点子类里面，按照2中的示例增加跳转的key-value对（注意：如果有两种界面都可以跳转到这个新增的界面，应该增加两个不同的子类，应为跳转逻辑是不同的）</li>
+    <li>编写测试用例时，创建一个ZKUINavigator类的实例，按照下面的方式调用即可：
+    <blockquote><pre>[self.navigator gotoViewWithName:NameOfClass(ZKUINavigationApiSelectView)];</pre></blockquote></li>
+    <li>如果你retain了刚才的ZKUINavigator实例，可以调用backToRootView方法返回到首页。</li>
+   </ol>
+  </li>
+
+  <li>删除一个视图（DelVC）：把对应的UI测试删掉即可，最好也把父结点中跳转到DelVC的key-value对删除</li>
+  <li>修改一个视图的跳转方法：按照需要，对nextJumps中的词典进行增、删、改。</li>
+</ul>
+
+以下示例代码来自SmartStudy项目下载模块的单元测试文件，实现的测试逻辑是：先把下载列表清空，在到学习页添加一个下载，然后回到下载页检查下载项目数量为1:
+<blockquote><pre>- (void)testDownload {
+  [self.navigator gotoViewWithName:NameOfClass(ZKUINavigationOfflineView)];
+  XCUIApplication *app = [[XCUIApplication alloc] init];
+  XCUIElement *tableQuery = [app.scrollViews.otherElements childrenMatchingType:XCUIElementTypeTable].element;
+  [self clearDownlaodsInTable:tableQuery];
+  if ([tableQuery exists]) {
+    [tableQuery swipeRight];
+    [self clearDownlaodsInTable:tableQuery];
+  }
+  [self.navigator gotoViewWithName:NameOfClass(ZKNavigationQuestionAndAnswerView)];
+  [app.tables.element.buttons[@"icon3333"] tap];
+  sleep(3);
+  [self.navigator backToRootView];
+  [self.navigator gotoViewWithName:NameOfClass(ZKUINavigationOfflineView)];
+  NSInteger downloadCount = tableQuery.staticTexts.count;
+  if (downloadCount < 1) {
+    [tableQuery swipeRight];
+    downloadCount += tableQuery.staticTexts.count;
+  }
+  XCTAssertTrue(downloadCount > 0);
+}</pre></blockquote>
+
+<h1>四，参考资料</h1>
+<a href="http://stackoverflow.com/questions/15982178/strange-ordering-of-kiwi-ios-context-blocks">http://stackoverflow.com/questions/15982178/strange-ordering-of-kiwi-ios-context-blocks</a><br />
+<a href="http://davemeehan.com/technology/unit-testing/test-and-behaviour-driven-development-on-ios-with-kiwi">http://davemeehan.com/technology/unit-testing/test-and-behaviour-driven-development-on-ios-with-kiwi</a><br />
+<a href="http://www.51testing.com/html/35/n-858235-4.html">http://www.51testing.com/html/35/n-858235-4.html</a><br />
+<a href="https://en.wikipedia.org/wiki/Mock_object">https://en.wikipedia.org/wiki/Mock_object</a><br />
+<a href="https://github.com/kiwi-bdd/Kiwi">https://github.com/kiwi-bdd/Kiwi</a><br />
+<a href="https://github.com/kif-framework/KIF">https://github.com/kif-framework/KIF</a><br />
+  </body>
+</html>

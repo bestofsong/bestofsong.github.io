@@ -1,0 +1,4 @@
+brew install privoxy
+配置
+https://xfdev.github.io/2016/01/19/ios-use-mac-shadowsocks-with-privoxy/
+http://ian.wang/196.htm

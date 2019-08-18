@@ -1,0 +1,28 @@
+#! /bin/bash
+
+function get_app_short_version_string {
+  printf `get_plist_key "$1" CFBundleShortVersionString`
+}
+
+function get_app_bundle_version {
+  printf `get_plist_key "$1" CFBundleVersion`
+}
+
+function get_app_name {
+  ret=`get_plist_key "$1" CFBundleDisplayName`
+  if [[ -z "$ret" ]] ; then
+    ret=`get_plist_key "$1" CFBundleName`
+  fi
+  printf "$ret"
+}
+
+# $1: full path to the dir containing proj_root
+# $2: the key to read from plist file
+function get_plist_key {
+  proj_root=$1
+  key=$2
+  workspace_file=`find "$proj_root" -maxdepth 1 -name "*.xcworkspace"\
+    -exec printf {} \;`
+  info_plist_path="${workspace_file%.*}/Info.plist"
+  printf `defaults read "$info_plist_path" $key`
+}

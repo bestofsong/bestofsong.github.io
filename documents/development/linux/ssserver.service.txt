@@ -1,0 +1,11 @@
+[Unit]
+Description=ssserver
+After=network.target
+
+[Service]
+Type=forking
+ExecStart=/usr/local/bin/ssserver -d start -c /etc/shadowsocks.json
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

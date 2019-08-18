@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" type="text/css" href="/documents/development/css/style.css" >
+    <link rel="stylesheet" type="text/css" href="/documents/development/css/documentation.css" >
+    <title>iOS项目jenkins环境配置文档</title>
+  </head>
+  <body>
+  <br />
+<h1>基于Jenkins的iOS持续集成环境搭建</h1>
+<p>需要在安装有Xcode集成开发环境的机器上实现iOS项目的编译、打包和测试。如果CI服务器不是OS X操作系统，  
+可以使用Jenkins的Master/Slave模式，CI服务器用作master，把job分发给安装有Xcode环境的slave机器。  
+或者在安装有Xcode的机器上配置Jenkins，直接从从Gitlab等代码仓库上获得代码和代码更新的推送。</p>
+  
+本篇文档主要涉及使用Jenkins拉取代码，然后在本地进行打包、测试。
+<h2>一，Jenkins安装与配置</h2>
+<h3>1.1 安装Jenkins</h3>
+我们通过homebrew安装Jenkins。为此需要先安装homebrew，使用的命令为
+<blockquote><pre>ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"</pre></blockquote>
+
+安装jenkins的命令为
+<blockquote><pre>brew install jenkins</pre></blockquote>
+
+安装完成后，使用命令
+<blockquote><pre>ln -sfv /usr/local/opt/jenkins/*.plist ~/Library/LaunchAgents/</pre></blockquote>
+让jenkins作为daemon自动启动。 <br />
+
+使用命令
+<blockquote><pre>launchctl load ~/Library/LaunchAgents/homebrew.mxcl.jenkins.plist</pre></blockquote>
+立即启动jenkins服务。<br />
+
+或者直接使用命令
+<blockquote><pre>jenkins</pre></blockquote>
+启动一次jenkins
+
+<h3>1.2 安装Jenkins插件</h3>
+GIT plugin <br />
+GitLab Plugin  <br />
+Xcode integration  <br />
+
+<h3>1.3 Jenkins测试任务</h3>
+我们使用基于苹果xcodebuild脚本工具编写的zkbuild.sh脚本来执行代码更新后测试、打包等操作。  
+zkbuild.sh的可以接收的选项和参数见文档第二部分。
+<ul>
+  <li>创建一个新任务<br />类型：构建一个自由风格的软件项目</li>
+  <li>配置任务<br />GitLab Repository Name: smartstudy-ios  
+  
+  源码管理:git  
+  Repository URL: git@code.smartstudy.com:mobileapp/smartstudy-ios  
+  Credentials: username with private key<br />
+  <ul>
+    <li>输入gitlab账号以及本地ssh私钥文件全部内容<br />增加构建步骤：execute shell</li>
+    <li>SmartStudy/Shell/zkbuild.sh -t</li>
+  </ul>
+  </li>
+</ul>
+
+<h3>1.4 Jenkins打包任务</h3>
+过程与Jenkins测试任务相似，不同在于最后的“构建步骤”，按照如下方式调用zkbuild.sh脚本  
+<blockquote><pre>SmartStudy/Shell/zkbuild.sh -e</pre></blockquote>
+
+<h2>二，基于xcodebuild的本地编译脚本</h2>
+本地编译打包脚本的路径为：版本库根目录/SmartStudy/Shell/zkbuild.sh  <br />
+使用方法为：  
+<blockquote><pre>-a [指定输出archive文件的路径，一般以.xcarchive为后缀]  
+-e [指定输出的ipa包文件的路径，一般以.ipa为后缀；如果不指定-a选项，则输出的archive文件的路径由本参数值推导：除了后缀名不同，其他部分与本参数值相同]                                                                                                                     
+-b 仅仅编译，不需要参数                             
+-t 编译并运行单元测试和UI测试，不需要参数                       
+-n|--name <设备名称，可以是物理机或模拟器>          
+-i|--identifier <设备的UDID>                        
+-o|--os <iOS版本, i.e. 8.0>                         
+-p|--platform <设备的平台，iOS Simulator或iOS或OS X></pre></blockquote>
+说明：  
+<ul>
+  <li>除"-n, -i, -o, -p"外，必须指定一个其他的参数以执行相应的操作</li>
+  <li>-a，-e的参数是可选的，其默认值是"~/年-月-日-时-分-秒-版本库commit号.*"</li>
+</ul>
+
+<h2>三，参考资料</h2>
+<a href="https://developer.apple.com/library/mac/documentation/Darwin/Reference/ManPages/man1/xcodebuild.1.html">https://developer.apple.com/library/mac/documentation/Darwin/Reference/ManPages/man1/xcodebuild.1.html</a>
+<br>
+<br>
+<br>
+<br>
+  </body>
+</html>

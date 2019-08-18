@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" type="text/css" href="/documents/development/css/style.css" >
+    <link rel="stylesheet" type="text/css" href="/documents/development/css/documentation.css" >
+    <script type="text/javascript" src="/lib/utils/URI.js"></script>
+    <script type="text/javascript">
+      var uri = URI(window.location.href);
+      document.title = uri.filename();
+    </script>
+  </head>
+  <body>
+  <p>
+  <h2>
+  录音、音频播放、分享
+  </h2>
+  </p>
+
+<p>
+    <h4>
+默认操作正常的回调参数：{code:0, msg:’操作成功’, data?:{}}
+?代表参数可选，code=-1代表未知错误
+    </h4>
+  <ul>
+    <li>
+mobile://start_record?duration?=60&callback_name=xxx
+    </li>
+
+    <li>
+mobile://stop_record?callback_name=xxx <br/>
+回调参数：{code:0, msg:'', data?: {path:’a/b/c’}}
+    </li>
+
+    <li>
+mobile://cancel_record?path=&lt;a/b/c&gt;&callback_name=xxx
+    </li>
+
+    <li>
+mobile://upload_audio?file=</a/a/c>&callback_name=xxx <br/>
+回调参数：{code:0, msg:'', data?: {url:'文件在cdn的地址’}}
+    </li>
+
+    <li>
+mobile://play_audio?file=<path/or/url>&url=xxx&callback_name=xxx
+    </li>
+
+    <li>
+mobile://pause_audio?file=</a/c>&url=xxx&callback_name=xxx
+    </li>
+
+    <li>
+mobile://signin?callback_name=xxx
+    </li>
+
+    <li>
+mobile://on_record_end?callback_name=... <br />
+callback_name在调用结束后，在js环境中不会删除，每次录音结束之后都可以重复调用callback_name给js回调
+    </li>
+
+    <li>
+mobile://on_audio_play_end?url=xxx&callback_name=xxx <br />
+callback_name在调用结束后，在js环境中不会删除，每次播放结束之后都可以重复调用callback_name给js回调
+    </li>
+
+    <li>
+mobile://set_share_data?title=xxx&desc=xxx&link=xxx&imgUrl=xxx&fromPage={'main' | 'report'}&callback_name=xxx <br />
+callback_name在调用结束后，在js环境中不会删除，每次分享之后都可以重复调用callback_name给js回调
+    </li>
+
+    <li>
+    mobile://observe_player_end?url=xxx&listener=xxx<br />   对应旧版的接口：mobile://on_audio_play_end?callback_name=xxx
+listener参数：{ code, msg, data: { file } }
+    </li>
+
+  </ul>
+
+</p>
+<p>
+
+<h4>新增的接口 (>= 2.4.0)</h4> 
+<ul>
+<li>
+    mobile://prepare_audio?url=xxx&callback_name=xxx <br /> callback参数：{ code, msg }, code=0代表本地已存在，prepare完成；code=300代表本地不存在，开始下载音频
+</li>
+
+<li>
+    mobile://observe_audio_load?url=xxx&listener=xxx <br> listener参数：{ code, msg }, code!=0代表加载出错
+</li>
+
+<li>
+    mobile://observe_player_time?url=xxx&listener=xxx <br /> listener参数：{ code, msg, data: { currentTime } }
+</li>
+
+<li>
+    mobile://observe_player_duration?url=xxx&listener=xxx <br /> listener参数：{ code, msg, data: { duration } }
+</li>
+
+<li>
+    mobile://set_play_rate?url=xxx&rate=xxx&callback_name=xxx
+</li>
+
+<li>
+    mobile://seek_player?url=xxx&time=&lt;数字，单位秒&gt;&callback_name=xxx
+</li>
+
+<li>
+    mobile://stop_audio?url=xxxcallback_name=xxx <br> 参数同pause_audio，效果=pause_audio + seek_player?time=0
+</li>
+
+    <li>
+mobile://resume_audio?url=xxx&callback_name=xxx
+    </li>
+
+    <li>
+mobile://set_on_back?method=&lt;stop_audio | pause_audio | remove_listener&gt;&query=&lt;JSON.stringify({ url })&gt; <br />
+method + query描述了页面返回时附加的操作, native端可以维护一个表，重复的method就覆盖query，不同的method视为增加更多的钩子
+    </li>
+
+    <li>
+mobile://clear_on_back?method=&lt;stop_audio | pause_audio | remove_listener&gt; <br />
+清除method
+    </li>
+
+</ul>
+
+<p>
+传给页面的query参数中包含：app_version=xx.yy.zz&app_type=ios&app-type=ios
+开始传的是app-type的格式，前端要求改成app_type；为兼容旧的页面，建议两种app-type都传，app_version没有兼容问题，只用新格式
+</p>
+
+<p style="background:yellow">
+    注：2.4.0之前，录音模块使用的pause_audio语义和方法名不一致，实际的行为是stop_audio，为了保持兼容，2.4.0的pause_audio除了实现pause功能还要兼容旧版的stop功能。可以通过query参数的不同来实现：file && !url是使用2.4.0以前的旧版的网页，实现stop功能，否则是新版，实现pause功能
+    </p>
+
+</p>
+<!--
+
+// 无法进入录音模式
+#define ERR_AUDIO_SESSION_CATEGORY_FAIL 102
+#define ERR_AUDIO_SESSION_ACTIVATE_FAIL 103
+
+// 无法结束激活
+#define ERR_AUDIO_SESSION_DEACTIVE_FAIL 301
+
+// 缺少用户授权
+#define ERR_AUDIO_RECORDER_AUTHORIZATION_FAIL 100
+#define ERR_AUDIO_RECORDER_NOT_ENOUGH_SPACE 101
+
+// 无法创建录音机
+#define ERR_AUDIO_RECORDER_CREATE_FAIL 104
+#define ERR_AUDIO_RECORDER_PREPARE_FAIL 105
+
+#define ERR_AUDIO_INPUT_NODE_UNAVAILABLE 110
+
+// 已经在录音
+#define ERR_AUDIO_RECORDER_ALREADY_RECORDING 106
+
+// 转码失败
+#define ERR_AUDIO_RECORDER_TRANSCODE_FAIL 107
+
+#define ERR_AUDIO_RECORDER_REMOVE_FAIL 108
+
+// 保存录音文件失败
+#define ERR_AUDIO_RECORDER_SAVE_FILE_FAIL 109
+-->
+  </body>
+</html>
